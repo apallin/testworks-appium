@@ -20,17 +20,10 @@ class AppiumDriver(webdriver.Remote):
         xml_object = xml.dom.minidom.parseString(element_utf)
         return xml_object.toprettyxml('   ')
 
-    def set_location(self, location):
-        if self.running_on_simulator():
-            self.log.debug('{} Setting location to:{}'.format(self, location))
-            super(AppiumDriver, self).set_location(latitude=location[0], longitude=location[1], altitude=0)
-        else:
-            self.log.debug('{} Not running on simulator... skipping setting of appium_driver location'.format(self))
-
     def execute(self, driver_command, params=None):
-        self.log.debug('{} Sending request: {}, {}'.format(self, driver_command, params))
+        log.debug('{} Sending request: {}, {}'.format(self, driver_command, params))
         result = super(AppiumDriver, self).execute(driver_command, params)
-        self.log.debug('{} Finished request: {}, {}'.format(self, driver_command, params))
+        log.debug('{} Finished request: {}, {}'.format(self, driver_command, params))
         return result
 
     def __str__(self):
