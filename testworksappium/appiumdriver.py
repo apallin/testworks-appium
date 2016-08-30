@@ -14,7 +14,6 @@ class AppiumDriver(webdriver.Remote):
         super(AppiumDriver, self).__init__(self.webdriver_url, self.capabilities)
 
     def page_source(self):
-        log.debug('{} getting page_source')
         element_source = super(AppiumDriver, self).page_source
         element_utf = element_source.encode('ascii', 'ignore').strip()
         xml_object = xml.dom.minidom.parseString(element_utf)

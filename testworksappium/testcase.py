@@ -40,7 +40,7 @@ class AppiumTestCase(unittest.TestCase):
             seconds_between=DEFAULT_WAIT,
             *args,
             **kwargs):
-        log.debug('Waiting for {} to return {} for {} seconds'.format(
+        log.debug("Waiting for {} to return {} for {} seconds".format(
             test_method.__name__, result, timeout_seconds))
         start = self.get_current_time()
 
@@ -52,15 +52,15 @@ class AppiumTestCase(unittest.TestCase):
             elif result == test_method_result:
                 return True
             else:
-                print 'Method {} received response: {} expected: {}.'.format(
-                    test_method.__name__, test_method_result, result)
+                log.error("Method {} received response: {} expected: {}.".format(
+                    test_method.__name__, test_method_result, result))
 
             if (self.get_current_time() - start) > timeout_seconds:
                 break
 
             gevent.sleep(seconds_between)
 
-        raise TimeoutError(
-            'Failed waiting for "{}" to return {}; '
-            'final value was {}'.format(
-                test_method.__name__, result, test_method_result))
+        raise TimeoutError("""
+                           Failed waiting for {} to return {};
+                           final value was {}""".format(
+            test_method.__name__, result, test_method_result))

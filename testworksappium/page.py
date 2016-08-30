@@ -1,9 +1,7 @@
 from abc import abstractmethod
 import logging
 import re
-import time
 
-from selenium.common.exceptions import WebDriverException
 
 from . import class_string, class_repr
 from element import Element
@@ -41,14 +39,6 @@ class Page(object):
         if contains_text:
             does_contain_text = True
         return does_contain_text
-
-    def hide_keyboard(self, key=None):
-        try:
-            time.sleep(1)
-            self.appium_driver.hide_keyboard(key)
-        except WebDriverException:
-            self.log.error("Failed to hide keyboard", exc_info=True)
-            raise
 
     def __str__(self):
         return class_string(self)
