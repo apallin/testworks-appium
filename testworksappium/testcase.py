@@ -1,36 +1,133 @@
+#!/usr/bin/env python
 import logging
-import unittest
+import os
+import signal
+from subprocess import Popen, PIPE
+import sys
 import time
+import unittest
 
 import gevent
 
+from appiumdriver import AppiumDriver
 from exceptions import TimeoutError
+
 
 log = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 60
 DEFAULT_WAIT = 1
+DEFAULT_PLATFORM = "Android"
+DEFAULT_PLATFORM_VERSION = "6.0"
+DEFAULT_DEVICE_NAME = "Android Emulator"
 
 
 class AppiumTestCase(unittest.TestCase):
+    """
+    Demo appium test case for Testworks Conf workshop.
+    Must create a new test case in the ../tests folder.
+    """
 
     def __init__(self, *args, **kwargs):
         super(AppiumTestCase, self).__init__(*args, **kwargs)
+        self.appium_driver = None
 
     def setUp(self, **kwargs):
-        pass
+        log.debug("{} Starting test".format(self.__name__))
+        test_start_time = self.get_current_time()
+        # Make test run directory
+        self.test_artifacts_dir = "{}/test-artifacts".format(os.getcwd())
+        self.test_output_dir = os.path.join(self.test_artifacts_dir,
+                                            "{}_{}".format(
+                                                self.__name__,
+                                                test_start_time))
+        if not os.path.exists(self.test_output_dir):
+            os.makedirs(self.test_output_dir)
+        # Start Appium Server
+        self.start_appium_server()
+        # Parse Capabilities
+        self.app = os.getenv("APP")
+        if not self.app:
+            raise Exception("No test application set with export APP=")
+        desired_capabilities = {
+            "noSign": True,
+            "app": self.app,
+            "platform": DEFAULT_PLATFORM,
+            "platformVersion": DEFAULT_PLATFORM_VERSION,
+            "deviceName": DEFAULT_DEVICE_NAME
+        }
+
+        # Connect to appium driver
+        self.connect_to_appium(desired_capabilities)
 
     def tearDown(self, **kwargs):
-        pass
+        log.debug("{} Tearing down test".format(self.__name__))
+        sys_exc_info = sys.exc_info()
+        test_passed = sys_exc_info == (None, None, None)
 
-    def create_page(self, page):
-        pass
+        # Check if tests passed and take final screenshot/page source if failed
+        if not test_passed and self.appium_driver:
+            log.error("{} Failed! Taking screenshot/page source".format(
+                self.__name__))
+            screenshot_filename = os.path.join(self.test_output_dir,
+                                               "failure_screenshot.jpeg")
+            self.appium_driver.save_screenshot(screenshot_filename)
+            page_tree_file_name = os.path.join(self.test_output_dir,
+                                               "page_tree.xml")
+            with open(page_tree_file_name, 'w') as page_tree_file:
+                element_tree = self.appium_driver.page_source()
+                page_tree_file.write(element_tree)
 
-    def start_appium(self, desired_capabilities):
-        pass
+        # Quit appium driver
+        if self.appium_driver:
+            self.appium_driver.quit()
+
+        # Stop appium server
+        self.stop_appium_sever()
+
+    def create_page(self, page_object, validate=True):
+        """
+        Method for taking a page object and adding the appium_driver for the
+        current test case to it for ease of instantiation.
+        :param: :page_object: Page object to create
+        :param: :validate: Boolean to validate page as part of creation
+        """
+        created_page = page_object(self.appium_driver)
+        if validate:
+            created_page.verify()
+        return created_page
+
+    def connect_to_appium(self, capabilities):
+        """
+        Open tests connection to appium driver on local host.
+        :param: :capabilities: Dict of test capabilities.
+        """
+        webdriver_url = "http://localhost:4723/wd/hub"
+        self.appium_driver = AppiumDriver(
+            webdriver_url=webdriver_url,
+            capabilities=capabilities)
+
+    def start_appium_sever(self):
+        """
+        Start appium server on localhost.
+        """
+        log.debug("{} Starting Appium Server".format(self.__name__))
+        cmd = "appium --log {}/appium.log".format(self.test_output_dir)
+        self.appium_proc = Popen(
+            cmd, stdout=PIPE, shell=True, preexec_fn=os.setsid)
+
+    def stop_appium_server(self):
+        """
+        Stop appium server on localhost.
+        """
+        log.debug("Stopping Appium Server".format(self.__name__))
+        os.killpg(os.getpgid(self.appium_proc.pid), signal.SIGTERM)
 
     def get_current_time(self):
-        return time.time()
+        """
+        Return current time stamp.
+        """
+        return time.time().split('.')[0]
 
     def wait_until(
             self,
@@ -40,8 +137,17 @@ class AppiumTestCase(unittest.TestCase):
             seconds_between=DEFAULT_WAIT,
             *args,
             **kwargs):
-        log.debug("Waiting for {} to return {} for {} seconds".format(
-            test_method.__name__, result, timeout_seconds))
+        """
+        Test method for asserting/retrying for a function to return expected
+        condition.
+        Examples:
+        Wait till element is visible
+        self.wait_until(self.element.is_visible())
+        Wait till element is not visible
+        self.wait_until(self.element.is_visible(), result=False)
+        """
+        log.debug("{} Waiting for {} to return {} for {} seconds".format(
+            self.__name__, test_method.__name__, result, timeout_seconds))
         start = self.get_current_time()
 
         test_method_result = None
@@ -52,8 +158,12 @@ class AppiumTestCase(unittest.TestCase):
             elif result == test_method_result:
                 return True
             else:
-                log.error("Method {} received response: {} expected: {}.".format(
-                    test_method.__name__, test_method_result, result))
+                log.error("""
+                    {} Method {} received response: {} expected: {}.""".format(
+                    self.__name__,
+                    test_method.__name__,
+                    test_method_result,
+                    result))
 
             if (self.get_current_time() - start) > timeout_seconds:
                 break
