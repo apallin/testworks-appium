@@ -19,6 +19,5 @@ setup(
     download_url=__url__,
     install_requires=[
         'Appium-Python-Client >= 0.22, < 1.0',
-        'gevent >= 1.1.2, < 1.2.0',
     ],
 )

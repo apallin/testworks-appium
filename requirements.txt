@@ -1,2 +1,1 @@
 Appium-Python-Client==0.22
-gevent==1.1.2

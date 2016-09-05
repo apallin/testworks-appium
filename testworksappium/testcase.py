@@ -7,8 +7,6 @@ import sys
 import time
 import unittest
 
-import gevent
-
 from appiumdriver import AppiumDriver
 from exceptions import TimeoutError
 
@@ -31,6 +29,7 @@ class AppiumTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(AppiumTestCase, self).__init__(*args, **kwargs)
         self.appium_driver = None
+        self.appium_proc = None
 
     def setUp(self, **kwargs):
         log.debug("{} Starting test".format(self.__name__))
@@ -43,7 +42,8 @@ class AppiumTestCase(unittest.TestCase):
                                                 test_start_time))
         if not os.path.exists(self.test_output_dir):
             os.makedirs(self.test_output_dir)
-        # Start Appium Server
+        # Stop/Start Appium Server
+        self.stop_appium_server()
         self.start_appium_server()
         # Parse Capabilities
         self.app = os.getenv("APP")
@@ -52,7 +52,7 @@ class AppiumTestCase(unittest.TestCase):
         desired_capabilities = {
             "noSign": True,
             "app": self.app,
-            "platform": DEFAULT_PLATFORM,
+            "platformName": DEFAULT_PLATFORM,
             "platformVersion": DEFAULT_PLATFORM_VERSION,
             "deviceName": DEFAULT_DEVICE_NAME
         }
@@ -83,9 +83,9 @@ class AppiumTestCase(unittest.TestCase):
             self.appium_driver.quit()
 
         # Stop appium server
-        self.stop_appium_sever()
+        self.stop_appium_server()
 
-    def create_page(self, page_object, validate=True):
+    def create_page(self, page_object):
         """
         Method for taking a page object and adding the appium_driver for the
         current test case to it for ease of instantiation.
@@ -93,8 +93,7 @@ class AppiumTestCase(unittest.TestCase):
         :param: :validate: Boolean to validate page as part of creation
         """
         created_page = page_object(self.appium_driver)
-        if validate:
-            created_page.verify()
+        created_page.testcase = self
         return created_page
 
     def connect_to_appium(self, capabilities):
@@ -107,7 +106,7 @@ class AppiumTestCase(unittest.TestCase):
             webdriver_url=webdriver_url,
             capabilities=capabilities)
 
-    def start_appium_sever(self):
+    def start_appium_server(self):
         """
         Start appium server on localhost.
         """
@@ -115,19 +114,32 @@ class AppiumTestCase(unittest.TestCase):
         cmd = "appium --log {}/appium.log".format(self.test_output_dir)
         self.appium_proc = Popen(
             cmd, stdout=PIPE, shell=True, preexec_fn=os.setsid)
+        # Need a hard sleep to wait for appium to start
+        time.sleep(5)
 
     def stop_appium_server(self):
         """
         Stop appium server on localhost.
         """
-        log.debug("Stopping Appium Server".format(self.__name__))
-        os.killpg(os.getpgid(self.appium_proc.pid), signal.SIGTERM)
+        if self.appium_proc:
+            log.debug("{} Stopping Appium: {}".format(
+                self.__name__, self.appium_proc.pid))
+            os.killpg(os.getpgid(self.appium_proc.pid), signal.SIGTERM)
+        else:
+            p = Popen(['ps', '-A'], stdout=PIPE)
+            out, err = p.communicate()
+            for process in out.splitlines():
+                if 'appium' in process:
+                    pid = int(process.split(None, 1)[0])
+                    log.debug("{} Stopping Appium: {}".format(
+                        self.__name__, pid))
+                    os.kill(pid, signal.SIGKILL)
 
     def get_current_time(self):
         """
         Return current time stamp.
         """
-        return time.time().split('.')[0]
+        return int(time.time())
 
     def wait_until(
             self,
@@ -158,19 +170,19 @@ class AppiumTestCase(unittest.TestCase):
             elif result == test_method_result:
                 return True
             else:
-                log.error("""
-                    {} Method {} received response: {} expected: {}.""".format(
-                    self.__name__,
-                    test_method.__name__,
-                    test_method_result,
-                    result))
+                log.error("{} Method {} received response: {}\n"
+                          "expected: {}.".format(
+                              self.__name__,
+                              test_method.__name__,
+                              test_method_result,
+                              result))
 
             if (self.get_current_time() - start) > timeout_seconds:
                 break
 
-            gevent.sleep(seconds_between)
+            time.sleep(seconds_between)
 
-        raise TimeoutError("""
-                           Failed waiting for {} to return {};
-                           final value was {}""".format(
-            test_method.__name__, result, test_method_result))
+        raise TimeoutError("Failed waiting for {} to return {};\n"
+                           "final value was {}".format(
+                               test_method.__name__,
+                               result, test_method_result))

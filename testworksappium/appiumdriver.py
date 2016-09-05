@@ -2,8 +2,6 @@
 import logging
 import xml.dom.minidom
 
-from . import class_string, class_repr
-
 from appium import webdriver
 
 log = logging.getLogger(__name__)
@@ -18,8 +16,10 @@ class AppiumDriver(webdriver.Remote):
     """
 
     def __init__(self, webdriver_url=None, capabilities=None):
+        self.webdriver_url = webdriver_url
+        self.capabilities = capabilities
         log.debug("{} Connecting to Appium with: {}".format(
-            self.__name__, capabilities))
+            self.__class__.__name__, capabilities))
         super(AppiumDriver, self).__init__(
             self.webdriver_url, self.capabilities)
 
@@ -33,9 +33,3 @@ class AppiumDriver(webdriver.Remote):
         element_utf = element_source.encode('ascii', 'ignore').strip()
         xml_object = xml.dom.minidom.parseString(element_utf)
         return xml_object.toprettyxml('   ')
-
-    def __str__(self):
-        return class_string(self)
-
-    def __repr__(self):
-        return class_repr(self)

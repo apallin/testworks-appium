@@ -3,8 +3,6 @@ from abc import abstractmethod
 import logging
 import re
 
-
-from . import class_string, class_repr
 from element import Element
 
 
@@ -30,22 +28,14 @@ class Page(object):
         """
         return
 
-    @abstractmethod
-    def validate(self):
-        """
-        Asserts that the page has correct elements and/or data.
-        """
-        return
-
-    def create_page_element(self, locator_key, locator_value):
+    def create_element(self, **kwargs):
         """
         Create a page element object given a locator_key/value
         :param: :locator_key: String locator_key
         :param: :locator_value: String locator_value
         :return: Element object
         """
-        element = Element(self.appium_driver,
-                          locator_key=locator_key, locator_value=locator_value)
+        element = Element(self.appium_driver, **kwargs)
         self.elements.append(element)
         return element
 
@@ -57,13 +47,7 @@ class Page(object):
         """
         does_contain_text = False
         text_regex = re.compile(re.escape(value))
-        contains_text = text_regex.search(self.appium_driver.page_source)
+        contains_text = text_regex.search(self.appium_driver.page_source())
         if contains_text:
             does_contain_text = True
         return does_contain_text
-
-    def __str__(self):
-        return class_string(self)
-
-    def __repr__(self):
-        return class_repr(self)

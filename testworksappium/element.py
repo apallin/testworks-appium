@@ -6,18 +6,9 @@ from appium.webdriver.common.touch_action import TouchAction
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import WebDriverException
 
-from . import class_string, class_repr
 from exceptions import ElementObjectNotSet
 
 log = logging.getLogger(__name__)
-
-_LOCATOR_MAP = {
-    'id_': MobileBy.ID,
-    'xpath': MobileBy.XPATH,
-    'tag_name': MobileBy.TAG_NAME,
-    'class_name': MobileBy.CLASS_NAME,
-    'android': MobileBy.ANDROID_UIAUTOMATOR,
-}
 
 
 class Element(object):
@@ -39,7 +30,7 @@ class Element(object):
         locator_key, locator_value = next(iter(kwargs.items()))
         self.locator_value = locator_value
         self.locator_key = locator_key
-        self.locator = (_LOCATOR_MAP[locator_key], locator_value)
+        self.locator = (locator_key, locator_value)
 
     def find_element(self):
         """
@@ -49,20 +40,22 @@ class Element(object):
         try:
             self.element_object = self.appium_driver.find_element(
                 by=self.locator_key, value=self.locator_value)
-        except NoSuchElementException:
+        except NoSuchElementException as e:
+            print e
             pass
         except WebDriverException:
+            print e
             pass
         return self.element_object
 
-    def is_visible(self):
+    def is_displayed(self):
         """
         Check for if element is visible
         :return: Boolean
         """
         self.find_element()
-        return [self.element_object.is_visible()
-                if self.element_object else False]
+        return self.element_object.is_displayed() \
+            if self.element_object else False
 
     def is_present(self):
         """
@@ -70,8 +63,8 @@ class Element(object):
         :return: Boolean
         """
         self.find_element()
-        return [self.element_object.is_present()
-                if self.element_object else False]
+        return self.element_object.is_present() \
+            if self.element_object else False
 
     def is_enabled(self):
         """
@@ -79,8 +72,8 @@ class Element(object):
         :return: Boolean
         """
         self.find_element()
-        return [self.element_object.is_enabled()
-                if self.element_object else False]
+        return self.element_object.is_enabled() \
+            if self.element_object else False
 
     def tap(self, x=0, y=0, count=1):
         """
@@ -132,9 +125,3 @@ class Element(object):
             return self.element_object.text
 
         raise ElementObjectNotSet
-
-    def __str__(self):
-        return class_string(self)
-
-    def __repr__(self):
-        return class_repr(self)
