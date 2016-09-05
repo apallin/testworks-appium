@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import logging
 import os
-import shutil
 import signal
 from subprocess import Popen, PIPE
 import sys
@@ -22,7 +21,8 @@ DEFAULT_PLATFORM_VERSION = "6.0"
 DEFAULT_DEVICE_NAME = "Android Emulator"
 TEST_ARTIFACTS_DIR = "{}/test-artifacts".format(os.getcwd())
 # LOGGER CONFIGS
-LOG_FORMAT = "[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s"
+LOG_FORMAT = "[%(asctime)s] %(levelname)s " + \
+    " [%(name)s.%(funcName)s:%(lineno)d] %(message)s"
 DATE_FORMAT = "%H:%M:%S"
 LEVEL = "DEBUG"
 
@@ -48,9 +48,11 @@ class AppiumTestCase(unittest.TestCase):
                                                 test_start_time))
         if not os.path.exists(self.test_output_dir):
             os.makedirs(self.test_output_dir)
+        # Set up test logger
+        if log.root.handlers:
+            log.root.handlers = []
         logging.basicConfig(
-            filename="{}/test_{}.log".format(TEST_ARTIFACTS_DIR,
-                                             test_start_time),
+            filename="{}/test.log".format(self.test_output_dir),
             level=LEVEL, format=LOG_FORMAT, datefmt=DATE_FORMAT)
         # Stop/Start Appium Server
         self.stop_appium_server()
