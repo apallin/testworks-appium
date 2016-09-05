@@ -4,6 +4,7 @@ import logging
 import re
 
 from element import Element
+from elements import Elements
 
 
 log = logging.getLogger(__name__)
@@ -19,7 +20,6 @@ class Page(object):
     def __init__(self, appium_driver):
         self.appium_driver = appium_driver
         self.page_source = None
-        self.elements = []
 
     @abstractmethod
     def verify(self):
@@ -37,8 +37,18 @@ class Page(object):
         """
         log.debug("Creating element with {}".format(kwargs))
         element = Element(self.appium_driver, **kwargs)
-        self.elements.append(element)
         return element
+
+    def create_elements(self, **kwargs):
+        """
+        Create a page element object given a locator_key/value
+        :param: :locator_key: String locator_key
+        :param: :locator_value: String locator_value
+        :return: Element object
+        """
+        log.debug("Creating elements with {}".format(kwargs))
+        elements = Elements(self.appium_driver, **kwargs)
+        return elements
 
     def page_contains(self, value):
         """
