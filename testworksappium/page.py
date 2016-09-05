@@ -35,6 +35,7 @@ class Page(object):
         :param: :locator_value: String locator_value
         :return: Element object
         """
+        log.debug("Creating element with {}".format(kwargs))
         element = Element(self.appium_driver, **kwargs)
         self.elements.append(element)
         return element
@@ -45,6 +46,7 @@ class Page(object):
         :param: :value: string value to find in page source
         :return: Boolean
         """
+        log.debug("Check if page contains {}".format(value))
         does_contain_text = False
         text_regex = re.compile(re.escape(value))
         contains_text = text_regex.search(self.appium_driver.page_source())

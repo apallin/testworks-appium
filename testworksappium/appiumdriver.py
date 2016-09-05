@@ -18,8 +18,7 @@ class AppiumDriver(webdriver.Remote):
     def __init__(self, webdriver_url=None, capabilities=None):
         self.webdriver_url = webdriver_url
         self.capabilities = capabilities
-        log.debug("{} Connecting to Appium with: {}".format(
-            self.__class__.__name__, capabilities))
+        log.debug("Connecting to Appium with: {}".format(capabilities))
         super(AppiumDriver, self).__init__(
             self.webdriver_url, self.capabilities)
 
@@ -28,7 +27,7 @@ class AppiumDriver(webdriver.Remote):
         Pretty print of page_souce xml object
         :return: formatted xml string
         """
-        log.debug("{} Collecting page source")
+        log.debug("Collecting page source")
         element_source = super(AppiumDriver, self).page_source
         element_utf = element_source.encode('ascii', 'ignore').strip()
         xml_object = xml.dom.minidom.parseString(element_utf)

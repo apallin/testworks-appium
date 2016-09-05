@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import logging
 
-from appium.webdriver.common.mobileby import MobileBy
 from appium.webdriver.common.touch_action import TouchAction
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import WebDriverException
@@ -37,14 +36,15 @@ class Element(object):
         Function for finding element object for appium interaction.
         :return: webdriver element object
         """
+        log.debug("Finding {}".format(self.locator))
         try:
             self.element_object = self.appium_driver.find_element(
                 by=self.locator_key, value=self.locator_value)
         except NoSuchElementException as e:
-            print e
+            log.error(e)
             pass
         except WebDriverException:
-            print e
+            log.error(e)
             pass
         return self.element_object
 
@@ -53,6 +53,8 @@ class Element(object):
         Check for if element is visible
         :return: Boolean
         """
+        log.debug("Checking if {} is displayed".format(
+            self.locator))
         self.find_element()
         return self.element_object.is_displayed() \
             if self.element_object else False
@@ -62,6 +64,7 @@ class Element(object):
         Check for if element is present.
         :return: Boolean
         """
+        log.debug("Checking if {} is present".format(self.locator))
         self.find_element()
         return self.element_object.is_present() \
             if self.element_object else False
@@ -71,6 +74,7 @@ class Element(object):
         Check for if element is enabled
         :return: Boolean
         """
+        log.debug("Checking if {} is enabled".format(self.locator))
         self.find_element()
         return self.element_object.is_enabled() \
             if self.element_object else False
@@ -84,6 +88,8 @@ class Element(object):
         :param: :y: int offset y for tap
         :param: :count: int number of times to tap
         """
+        log.debug("Tapping {} with {},{} {} times".format(
+            self.locator, x, y, count))
         if self.element_object:
             return self.action.tap(
                 self.element_object, x=x, y=y, count=count).perform()
@@ -98,6 +104,8 @@ class Element(object):
         self.element.find_element().set_value("foo")
         :param: :text: string to set element
         """
+        log.debug("Setting value of {} to {}".format(
+            self.locator, text))
         if self.element_object:
             return self.element_object.set_value(text)
 
@@ -110,6 +118,8 @@ class Element(object):
         self.element.find_element().send_keys("foo")
         :param: :keys: string of keys to send.
         """
+        log.debug("Sending {} keys to {}".format(
+            keys, self.locator))
         if self.element_object:
             return self.element_object.send_keys(keys)
 
@@ -121,6 +131,7 @@ class Element(object):
         Example:
         self.element.find_element().text()
         """
+        log.debug("Getting text of {}".format(self.locator))
         if self.element_object:
             return self.element_object.text
 

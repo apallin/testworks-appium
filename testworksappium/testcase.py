@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import logging
 import os
+import shutil
 import signal
 from subprocess import Popen, PIPE
 import sys
@@ -13,11 +14,17 @@ from exceptions import TimeoutError
 
 log = logging.getLogger(__name__)
 
+# DEFAULT CONFIGS
 DEFAULT_TIMEOUT = 60
 DEFAULT_WAIT = 1
 DEFAULT_PLATFORM = "Android"
 DEFAULT_PLATFORM_VERSION = "6.0"
 DEFAULT_DEVICE_NAME = "Android Emulator"
+TEST_ARTIFACTS_DIR = "{}/test-artifacts".format(os.getcwd())
+# LOGGER CONFIGS
+LOG_FORMAT = "[%(asctime)s] %(levelname)s [%(name)s.%(funcName)s:%(lineno)d] %(message)s"
+DATE_FORMAT = "%H:%M:%S"
+LEVEL = "DEBUG"
 
 
 class AppiumTestCase(unittest.TestCase):
@@ -32,16 +39,19 @@ class AppiumTestCase(unittest.TestCase):
         self.appium_proc = None
 
     def setUp(self, **kwargs):
-        log.debug("{} Starting test".format(self.__name__))
+        log.debug("Starting {}".format(self.__name__))
         test_start_time = self.get_current_time()
         # Make test run directory
-        self.test_artifacts_dir = "{}/test-artifacts".format(os.getcwd())
-        self.test_output_dir = os.path.join(self.test_artifacts_dir,
+        self.test_output_dir = os.path.join(TEST_ARTIFACTS_DIR,
                                             "{}_{}".format(
                                                 self.__name__,
                                                 test_start_time))
         if not os.path.exists(self.test_output_dir):
             os.makedirs(self.test_output_dir)
+        logging.basicConfig(
+            filename="{}/test_{}.log".format(TEST_ARTIFACTS_DIR,
+                                             test_start_time),
+            level=LEVEL, format=LOG_FORMAT, datefmt=DATE_FORMAT)
         # Stop/Start Appium Server
         self.stop_appium_server()
         self.start_appium_server()
@@ -61,14 +71,14 @@ class AppiumTestCase(unittest.TestCase):
         self.connect_to_appium(desired_capabilities)
 
     def tearDown(self, **kwargs):
-        log.debug("{} Tearing down test".format(self.__name__))
+        log.debug("Tearing down {}".format(self.__name__))
         sys_exc_info = sys.exc_info()
         test_passed = sys_exc_info == (None, None, None)
 
         # Check if tests passed and take final screenshot/page source if failed
         if not test_passed and self.appium_driver:
-            log.error("{} Failed! Taking screenshot/page source".format(
-                self.__name__))
+            log.error(
+                "Failed! {}".format(sys_exc_info[1]))
             screenshot_filename = os.path.join(self.test_output_dir,
                                                "failure_screenshot.jpeg")
             self.appium_driver.save_screenshot(screenshot_filename)
@@ -76,7 +86,8 @@ class AppiumTestCase(unittest.TestCase):
                                                "page_tree.xml")
             with open(page_tree_file_name, 'w') as page_tree_file:
                 element_tree = self.appium_driver.page_source()
-                page_tree_file.write(element_tree)
+                for line in element_tree:
+                    page_tree_file.write(element_tree)
 
         # Quit appium driver
         if self.appium_driver:
@@ -84,6 +95,7 @@ class AppiumTestCase(unittest.TestCase):
 
         # Stop appium server
         self.stop_appium_server()
+        log.debug("{0} END {0}".format("=" * 25))
 
     def create_page(self, page_object):
         """
@@ -110,7 +122,7 @@ class AppiumTestCase(unittest.TestCase):
         """
         Start appium server on localhost.
         """
-        log.debug("{} Starting Appium Server".format(self.__name__))
+        log.debug("Starting Appium Server")
         cmd = "appium --log {}/appium.log".format(self.test_output_dir)
         self.appium_proc = Popen(
             cmd, stdout=PIPE, shell=True, preexec_fn=os.setsid)
@@ -122,8 +134,7 @@ class AppiumTestCase(unittest.TestCase):
         Stop appium server on localhost.
         """
         if self.appium_proc:
-            log.debug("{} Stopping Appium: {}".format(
-                self.__name__, self.appium_proc.pid))
+            log.debug("Stopping Appium: {}".format(self.appium_proc.pid))
             os.killpg(os.getpgid(self.appium_proc.pid), signal.SIGTERM)
         else:
             p = Popen(['ps', '-A'], stdout=PIPE)
@@ -131,8 +142,7 @@ class AppiumTestCase(unittest.TestCase):
             for process in out.splitlines():
                 if 'appium' in process:
                     pid = int(process.split(None, 1)[0])
-                    log.debug("{} Stopping Appium: {}".format(
-                        self.__name__, pid))
+                    log.debug("Stopping Appium: {}".format(pid))
                     os.kill(pid, signal.SIGKILL)
 
     def get_current_time(self):
@@ -158,8 +168,8 @@ class AppiumTestCase(unittest.TestCase):
         Wait till element is not visible
         self.wait_until(self.element.is_visible(), result=False)
         """
-        log.debug("{} Waiting for {} to return {} for {} seconds".format(
-            self.__name__, test_method.__name__, result, timeout_seconds))
+        log.debug("Waiting for {} to return {} for {} seconds".format(
+            test_method.__name__, result, timeout_seconds))
         start = self.get_current_time()
 
         test_method_result = None
@@ -170,9 +180,8 @@ class AppiumTestCase(unittest.TestCase):
             elif result == test_method_result:
                 return True
             else:
-                log.error("{} Method {} received response: {}\n"
+                log.error("Method {} received response: {}\n"
                           "expected: {}.".format(
-                              self.__name__,
                               test_method.__name__,
                               test_method_result,
                               result))
