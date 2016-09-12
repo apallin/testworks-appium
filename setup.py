@@ -19,5 +19,6 @@ setup(
     download_url=__url__,
     install_requires=[
         'Appium-Python-Client >= 0.22, < 1.0',
+        'pytest >= 3.0.0, < 3.1.0',
     ],
 )
