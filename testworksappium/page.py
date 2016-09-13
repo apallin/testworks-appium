@@ -28,6 +28,13 @@ class Page(object):
         """
         return
 
+    @abstractmethod
+    def validate(self):
+        """
+        Assert elements on a page to validate the page contents
+        """
+        return
+
     def create_element(self, **kwargs):
         """
         Create a page element object given a locator_key/value

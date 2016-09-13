@@ -1,6 +1,6 @@
 from setuptools import setup
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 __url__ = 'https://github.com/apallin/testworks-appium/tarball/{}'.format(
     __version__)
 
